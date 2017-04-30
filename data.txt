@@ -1,0 +1,5 @@
+python json http://www.cnblogs.com/kaituorensheng/p/3877382.html
+python websocket http://www.cnblogs.com/jinjiangongzuoshi/p/5062092.html
+
+config.py   websocket config
+server.py   websocket server
