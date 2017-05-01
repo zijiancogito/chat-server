@@ -37,25 +37,28 @@ def token_data(server, sjson):
     sjson = '%s%s' % (token, sjson)
     return sjson
 def process_data(server, data, address):
+    print(data)
     jdata = json.loads(data)
     state = jdata['state']
     if state == 1:
-        encryptedData = jdata['encInfo']
-        iv = jdata['iv']
-        decrypt(encryptedDatass, iv)
-        #username = jdata['name']
-        flag=0
-        if flag:
-            res = "success"
-            #connectionlist[username]=address
-        else:
-            res = "fail"
-        reply = {'res':res}
-        sjson = json.dumps(reply)
-
-        sjson = token_data(server,sjson)
-        t1 = threading.Thread(target=sendMsg, args=[server, sjson, address])
-        t1.start()
+        # encryptedData = jdata['encInfo']
+        # iv = jdata['iv']
+        # decrypt(encryptedDatass, iv)
+        # #username = jdata['name']
+        # flag=0
+        # if flag:
+        #     res = "success"
+        #     #connectionlist[username]=address
+        # else:
+        #     res = "fail"
+        # reply = {'res':res}
+        # sjson = json.dumps(reply)
+        #
+        # sjson = token_data(server,sjson)
+        # t1 = threading.Thread(target=sendMsg, args=[server, sjson, address])
+        # t1.start()
+        code = jdata['code']
+        print(code)
     # """
     # elif state == 1:
     #     flag = login(jdata)
@@ -75,19 +78,17 @@ def process_data(server, data, address):
     elif state == 2:
         print(jdata)
         chatlog = send_message(jdata)
-        state = 1
         log=[]
         for i in chatlog:
             contain = i[1]
             friendName = i[2]
             fromstr = 'recv'
-            cur_thread = threading.current_thread()
-            sendJson = [{'text':contain,'from':fromstr,'friendName':friendName}]
+            sendJson = {'text':contain,'from':fromstr,'friendName':friendName}
             send = json.dumps(sendJson)
-            self.request.sendall(send)
-            rec_cmd = "proccess "+rec_src+" -o "+rec_dst
-            print "CMD '%r'" % (rec_cmd)
-            os.system(rec_cmd)
+            log.append(send)
+        data = {'state':1, 'log':log}
+        data = json.dumps(data)
+        t1 = threading.Thread(target=sendMsg, args=[server, data, address])
     elif state == 3:
         recv_message(jdata)
     else:
