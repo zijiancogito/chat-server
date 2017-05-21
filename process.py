@@ -5,15 +5,15 @@ from login import login
 from recv_message import recv_message
 from send_message import send_message
 from sendMsg import sendMsg
-from connectionlist import connectionlist
-
+from error import data_error
+from const import connectionlist
+from database import conn,cur
 from WXBizDataCrypt import WXBizDataCrypt
 
-def decrypt(encryptedData, iv):
+def decrypt(encryptedData, iv, session_key):
     appId = 'wx2bd3ca4f04e83411'
-    sessionKey = 'tiihtNczf5v6AKRyjwEUhQ=='
 
-    pc = WXBizDataCrypt(appId, sessionKey)
+    pc = WXBizDataCrypt(appId, session_key)
 
     print pc.decryptData(encryptedData, iv)
 
@@ -25,7 +25,6 @@ def token_data(server, sjson):
     except:
         username = 'anonymity user'
     token = "\x81"
-    # struct为Python中处理二进制数的模块，二进制流为C，或网络流的形式。
     length = len(sjson)
     if length < 126:
         token += struct.pack("B", length)
@@ -33,50 +32,61 @@ def token_data(server, sjson):
         token += struct.pack("!BH", 126, length)
     else:
         token += struct.pack("!BQ", 127, length)
-    #print(type(sjson))
     sjson = '%s%s' % (token, sjson)
     return sjson
+
+def get_session(code):
+    import urllib
+    appid = "wx2bd3ca4f04e83411"
+    secret = "e267808c0e7f6e89b3d51cecc9799216"
+    url = "https://api.weixin.qq.com/sns/jscode2session?appid="+appid+"&secret="+secret+"&js_code="+code+"&grant_type=authorization_code"
+    page = urllib.urlopen(url)
+    html = page.read()
+    data = json.loads(html)
+    return data
+def save_session(_3rd_session, session_key, openid):
+    try:
+        sql = "select openid from session where openid=%s;"
+        cur.execute(sql, [openid])
+        temp = cur.fetchall()
+        if len(temp):
+            try:
+                sqlu = "update session set third_session = %s where openid = %s;"
+                cur.execute(sqlu, [_3rd_session, openid])
+                conn.commit()
+            except:
+                print "error"
+        else:
+            sqli = "insert into session(third_session,session_key,openid) values(%s,%s,%s);"
+            cur.execute(sqli,[_3rd_session,session_key,openid])
+            conn.commit()
+            try:
+                sqli = "insert into session(third_session,session_key,openid) values(%s,%s,%s);"
+                cur.execute(sqli,[_3rd_session,session_key,openid])
+                conn.commit()
+            except:
+                print "error"
+    except:
+        print "error"
+
 def process_data(server, data, address):
-    print(data)
     jdata = json.loads(data)
     state = jdata['state']
     if state == 1:
-        # encryptedData = jdata['encInfo']
-        # iv = jdata['iv']
-        # decrypt(encryptedDatass, iv)
-        # #username = jdata['name']
-        # flag=0
-        # if flag:
-        #     res = "success"
-        #     #connectionlist[username]=address
-        # else:
-        #     res = "fail"
-        # reply = {'res':res}
-        # sjson = json.dumps(reply)
-        #
-        # sjson = token_data(server,sjson)
-        # t1 = threading.Thread(target=sendMsg, args=[server, sjson, address])
-        # t1.start()
         code = jdata['code']
-        print(code)
-    # """
-    # elif state == 1:
-    #     flag = login(jdata)
-    #     username = jdata['acc']
-    #     if flag:
-    #         res = "success"
-    #         connectionlist[username]=address
-    #     else:
-    #         res="fail"
-    #     reply = {'reply':res}
-    #     sjson = json.dumps(reply)
-    #     sjson = token_data(server,sjson)
-    #     #print res
-    #     t1 = threading.Thread(target=sendMsg, args=[server, sjson, address])
-    #     t1.start()
-    # """
+        data = get_session(code)
+        session_key = data['session_key']
+        openid = data['openid']
+        from os import urandom
+        import binhex
+        import binascii
+        _3rd_session = binascii.hexlify(urandom(16)).decode()
+        save_session(_3rd_session, session_key, openid)
+        reply = {'reply':_3rd_session}
+        sjson = json.dumps(reply)
+        sjson = token_data(server, sjson)
+        t1 = threading.Thread(target=sendMsg, args=[server, sjson, address])
     elif state == 2:
-        print(jdata)
         chatlog = send_message(jdata)
         log=[]
         for i in chatlog:

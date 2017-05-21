@@ -58,7 +58,6 @@ def readMsg(server, address):
             i += 1
 
         # 开启线程记录
-        if raw_str:
-            print(raw_str)
+        if raw_str and raw_str[0] == '{':
             t1 = threading.Thread(target=process_data, args=[server,raw_str, address])
             t1.start()

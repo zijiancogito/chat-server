@@ -7,7 +7,7 @@ class WXBizDataCrypt:
         self.appId = appId
         self.sessionKey = sessionKey
 
-    def decrypt(self, encryptedData, iv):
+    def decryptData(self, encryptedData, iv):
         # base64 decode
         sessionKey = base64.b64decode(self.sessionKey)
         encryptedData = base64.b64decode(encryptedData)

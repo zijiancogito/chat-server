@@ -1,11 +1,8 @@
 from database import conn,cur
-def register(registerJson):
-    username = registerJson['name']
-    password = registerJson['psw']
-    phonenum = registerJson['phone']
-    sqli = "insert into user(username,password,phonenum) values(%s,%s,%s);"
+def register(userid):
+    sqli = "insert into user(iduser) values(%s);"
     try:
-        cur.execute(sqli,(username,password,phonenum))
+        cur.execute(sqli,(userid))
         conn.commit()
         return 1
     except:

@@ -1,8 +1,7 @@
 from database import conn,cur
 def send_message(messageJson):
-    name = messageJson['myName']
-    #friendName = messageJson['friendName']
-    print(name)
+    third = messageJson['third']
+    
     #print(friendName)
     sqli = "select * from chatlog where targetName=%s;"
     #sqld = "delete from chatlog where targetName=%s and scrName=%s"

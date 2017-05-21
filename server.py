@@ -37,6 +37,7 @@ class Server():
             try:
                 getInfo = header.split('\r\n')[0].split(' ')[1].split('/')[1:]
                 if getInfo[0] == 'name':
+                    print getInfo[1]
                     self.users[address] = str(getInfo[1])
                 else:
                     self.users[address] = 'anonymity user'

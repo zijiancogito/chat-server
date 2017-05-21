@@ -1,19 +1,11 @@
 from database import conn,cur
-def login(loginJson):
-    username = loginJson['acc']
-    #print(username)
-    password = loginJson['psw']
-    sqli = "select password from user where username=%s;"
+def login(userid):
+
+    sqls = "select password from user where iduser=%s;"
     try:
-        cur.execute(sqli,[username])
+        cur.execute(sqls,[userid])
         temp = cur.fetchall()
-        #print(temp)
-        psw = temp[0][0]
-        if psw == password:
-            #connectionlist.append(username)
-            return 1
-        else:
-            return 0
+        return 1
     except:
-        return 0
+        register(userid)
     return 0
