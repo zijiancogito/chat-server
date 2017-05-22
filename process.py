@@ -74,9 +74,23 @@ def getpubkey():
         pubkey=pubkey+line[0:len(line)-1]
     return pubkey
 
+from Crypto.PublicKey import RSA
+def decrypt(ciphertext):
+    externKey="PrivateKey.pem"
+    publickey = open(externKey, "r")
+    decryptor = RSA.importKey(publickey, passphrase="f00bar")
+    retval=None
+    retval = decryptor.decrypt(ciphertext)
+    return retval
+
 def process_data(server, data, address):
     jdata = json.loads(data)
     state = jdata['state']
+    jmsg = None
+    if state != 1:
+        text = jdata['text']
+        message = decrypt(text)
+        jmsg = json.loads(message)
     if state == 1:
         code = jdata['code']
         data = get_session(code)
@@ -101,7 +115,7 @@ def process_data(server, data, address):
         except:
             pass
     elif state == 2:
-        chatlog = send_message(jdata)
+        chatlog = send_message(jmsg)
         log=[]
         if chatlog:
             for i in chatlog:
