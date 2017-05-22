@@ -2,9 +2,8 @@
 import json, threading
 from register import register
 from login import login
-from recv_message import recv_message
+from recv_message import recv_message,offline
 from send_message import send_message
-from sendMsg import sendMsg
 from error import data_error
 from const import connectionlist
 from database import conn,cur
@@ -44,6 +43,7 @@ def get_session(code):
     html = page.read()
     data = json.loads(html)
     return data
+
 def save_session(_3rd_session, session_key, openid):
     try:
         sql = "select openid from session where openid=%s;"
@@ -51,23 +51,28 @@ def save_session(_3rd_session, session_key, openid):
         temp = cur.fetchall()
         if len(temp):
             try:
-                sqlu = "update session set third_session = %s where openid = %s;"
+                sqlu = "update session set third_session = %s,sequence=0 where openid = %s;"
                 cur.execute(sqlu, [_3rd_session, openid])
                 conn.commit()
             except:
                 print "error"
         else:
-            sqli = "insert into session(third_session,session_key,openid) values(%s,%s,%s);"
-            cur.execute(sqli,[_3rd_session,session_key,openid])
-            conn.commit()
             try:
-                sqli = "insert into session(third_session,session_key,openid) values(%s,%s,%s);"
+                sqli = "insert into session(third_session,session_key,openid,sequence) values(%s,%s,%s,0);"
                 cur.execute(sqli,[_3rd_session,session_key,openid])
                 conn.commit()
             except:
                 print "error"
     except:
         print "error"
+
+def getpubkey():
+    keyfile=open("PublicKey.pem","r")
+    text=keyfile.readlines()
+    pubkey=""
+    for line in text[1:len(text)-1]:
+        pubkey=pubkey+line[0:len(line)-1]
+    return pubkey
 
 def process_data(server, data, address):
     jdata = json.loads(data)
@@ -82,24 +87,63 @@ def process_data(server, data, address):
         import binascii
         _3rd_session = binascii.hexlify(urandom(16)).decode()
         save_session(_3rd_session, session_key, openid)
-        reply = {'reply':_3rd_session}
+        pubkey=getpubkey()
+        reply = {'reply':_3rd_session,'pubkey':pubkey}
         sjson = json.dumps(reply)
         sjson = token_data(server, sjson)
-        t1 = threading.Thread(target=sendMsg, args=[server, sjson, address])
+        connectionlist[_3rd_session]=address
+        try:
+            client = server.clients[address]
+            try:
+                client.send(sjson)
+            except:
+                server.close_client(address)
+        except:
+            pass
     elif state == 2:
         chatlog = send_message(jdata)
         log=[]
-        for i in chatlog:
-            contain = i[1]
-            friendName = i[2]
-            fromstr = 'recv'
-            sendJson = {'text':contain,'from':fromstr,'friendName':friendName}
-            send = json.dumps(sendJson)
-            log.append(send)
+        if chatlog:
+            for i in chatlog:
+                fromstr = 'recv'
+                sendJson = {'text':i[2],'from':i[0],'time':i[1]}
+                send = json.dumps(sendJson)
+                log.append(send)
         data = {'state':1, 'log':log}
         data = json.dumps(data)
-        t1 = threading.Thread(target=sendMsg, args=[server, data, address])
+        sjson = token_data(server, data)
+        try:
+            client = server.clients[address]
+            try:
+                client.send(sjson)
+            except:
+                server.close_client(address)
+        except:
+            pass
     elif state == 3:
-        recv_message(jdata)
+        data=recv_message(jdata)
+        if data:
+            des=data[0]
+            sendtime=data[1]
+            message=data[2]
+            src=data[3]
+            trd=data[4]
+            if trd not in connectionlist:
+                offline(des,sendtime,message,src)
+            else:
+                sendJson={'state':3,'text':message,'from':src,'time':sendtime}
+                send=json.dumps(sendJson)
+                sjson=token_data(server,send)
+                address=connectionlist[trd]
+                try:
+                    client = server.clients[address]
+                    try:
+                        client.send(sjson)
+                    except:
+                        server.close_client(address)
+                except:
+                    pass
+        else:
+            pass
     else:
         data_error()

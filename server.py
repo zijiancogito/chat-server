@@ -23,7 +23,7 @@ class Server():
         while 1:
             # 循环监听
             tcpClientSock, addr = self.sock.accept()
-            address = addr[0]# + ':' + str(addr[1])  # ip:port
+            address = addr[0] #+ ':' + str(addr[1])  # ip:port
 
             # 握手
             topInfo = tcpClientSock.recv(1024)
