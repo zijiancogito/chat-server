@@ -75,22 +75,28 @@ def getpubkey():
     return pubkey
 
 from Crypto.PublicKey import RSA
-def decrypt(ciphertext):
+def pubdecrypt(ciphertext):
     externKey="PrivateKey.pem"
     publickey = open(externKey, "r")
     decryptor = RSA.importKey(publickey, passphrase="f00bar")
     retval=None
     retval = decryptor.decrypt(ciphertext)
     return retval
-
+# from M2Crypto.EVP import Cipher
+# def datadecrypt(ciphertext,key):
+#     decryptor = Cipher(alg='des_ede3_ecb', key=key, op=0, iv='\0'*16)
+#     s= decryptor.update(ciphertext)
+#     return s + decryptor.final()
 def process_data(server, data, address):
     jdata = json.loads(data)
     state = jdata['state']
-    jmsg = None
-    if state != 1:
-        text = jdata['text']
-        message = decrypt(text)
-        jmsg = json.loads(message)
+    # jmsg = None
+    # if state != 1:
+    #     text1 = jdata['text1']
+    #     text2 = jdata['text2']
+    #     key = pubdecrypt(text1)
+    #     msg = datadecrypt(text2,key)
+    #     jmsg = json.loads(msg)
     if state == 1:
         code = jdata['code']
         data = get_session(code)
@@ -115,7 +121,7 @@ def process_data(server, data, address):
         except:
             pass
     elif state == 2:
-        chatlog = send_message(jmsg)
+        chatlog = send_message(jdata)
         log=[]
         if chatlog:
             for i in chatlog:
@@ -148,13 +154,13 @@ def process_data(server, data, address):
                 sendJson={'state':3,'text':message,'from':src,'time':sendtime}
                 send=json.dumps(sendJson)
                 sjson=token_data(server,send)
-                address=connectionlist[trd]
+                addr=connectionlist[trd]
                 try:
-                    client = server.clients[address]
+                    client = server.clients[addr]
                     try:
                         client.send(sjson)
                     except:
-                        server.close_client(address)
+                        server.close_client(addr)
                 except:
                     pass
         else:
