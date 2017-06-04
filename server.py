@@ -2,7 +2,7 @@
 
 from socket import *
 import json, time, threading
-
+import ssl
 from config import config
 from readMsg import readMsg
 
@@ -23,13 +23,17 @@ class Server():
         while 1:
             # 循环监听
             tcpClientSock, addr = self.sock.accept()
+            key="/etc/nginx/2_99434340.hitchatapp.com.key"
+            crt="/etc/nginx/1_99434340.hitchatapp.com_bundle.crt"
+            connstream = ssl.wrap_socket(tcpClientSock, key, crt, server_side=True,ssl_version = ssl.PROTOCOL_TLSv1)
             address = addr[0] + ':' + str(addr[1])  # ip:port
-
+	   # print address
             # 握手
-            topInfo = tcpClientSock.recv(1024)
+            topInfo = connstream.recv(1024)
+	    #print topInfo
             headers = {}
             if not topInfo:
-                tcpClientSock.close()
+                connstream.close()
                 continue
 
             header, data = topInfo.split('\r\n\r\n', 1)
@@ -43,14 +47,13 @@ class Server():
                     self.users[address] = 'anonymity user'
             except:
                 self.users[address] = 'anonymity user'
-
-
+            #print header
             for line in header.split('\r\n')[1:]:
                 key, val = line.split(': ', 1)
                 headers[key] = val
 
             if 'Sec-WebSocket-Key' not in headers:
-                tcpClientSock.close()
+                connstream.close()
                 continue
 
             import hashlib, base64
@@ -58,12 +61,12 @@ class Server():
             res_key = base64.b64encode(hashlib.sha1(sec_key + config['MAGIC_STRING']).digest())
 
             str_handshake = config['HANDSHAKE_STRING'].replace('{1}', res_key).replace('{2}', config['HOST'] + ':' + str(config['PORT']))
-            tcpClientSock.send(str_handshake)
+            connstream.send(str_handshake)
 
             # 握手成功 分配线程进行监听
             print(address+'login')
 
-            self.clients[address] = tcpClientSock
+            self.clients[address] = connstream
             self.thrs[address] = threading.Thread(target=readMsg, args=[self,address])
             self.thrs[address].start()
 

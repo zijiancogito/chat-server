@@ -1,9 +1,9 @@
-import MySQLdb.connector
-conn= MySQLdb.connector.connect(
-        host='localhost',
+import MySQLdb
+conn= MySQLdb.connect(
+        host='10.66.230.56',
         port = 3306,
         user='root',
-        passwd='19960209',
-        db ='chat',
+        passwd='caoying123',
+        db ='test',
         )
 cur = conn.cursor()
